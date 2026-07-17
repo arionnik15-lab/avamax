@@ -507,10 +507,8 @@ async def vip_checkin_sweep(limit: int = 3) -> int:
 
 
 async def autosend_sweep(limit: int = 10) -> int:
-    """Send the safe drafts by themselves, for models with auto-send enabled. Only
-    money-free, compliance-clean, non-first replies during active hours qualify."""
-    if not realism.active_now():
-        return 0
+    """Send drafts by themselves for models with auto-send enabled.
+    Active-hours gating is only for proactive sweeps (win-back etc.), not replies."""
     from . import autosend, deliver
     rows = query_all(
         "SELECT m.id AS mid, m.text, m.price_cents, m.media_id, m.note, t.profile_id, t.id AS tid "
@@ -648,26 +646,29 @@ async def _pull_profile(key: str) -> int:
                 try:
                     draft = await generate_draft(thread["id"])
                     mid = draft.get("id")
+                    if not mid:
+                        continue
                     snippet = (draft.get("text") or "")[:900]
                     price = int(draft.get("price_cents") or 0)
-                    from . import autosend
-                    will_auto = bool(mid) and autosend.enabled(pid) and autosend.safe(
+                    from . import autosend, deliver
+                    will_auto = autosend.enabled(pid) and autosend.safe(
                         draft.get("text") or "",
                         price_cents=price,
                         media_id=draft.get("media_id"),
                         note=draft.get("note") or "",
                         has_history=True,
                     )
-                    # Auto-send handles it on the next sweep — do not wake the operator.
                     if will_auto:
-                        continue
+                        try:
+                            await deliver.deliver_message(mid)
+                            continue  # sent — no Approve ping
+                        except Exception:  # noqa: BLE001
+                            pass  # fall through to Approve ping
                     price_bit = f"\nPPV ${price / 100:.0f}" if price else ""
-                    buttons = None
-                    if mid:
-                        buttons = [[
-                            {"text": "Approve + send", "callback_data": f"chat:approve:{mid}"},
-                            {"text": "Skip", "callback_data": f"chat:skip:{mid}"},
-                        ]]
+                    buttons = [[
+                        {"text": "Approve + send", "callback_data": f"chat:approve:{mid}"},
+                        {"text": "Skip", "callback_data": f"chat:skip:{mid}"},
+                    ]]
                     body = f"{snippet}{price_bit}\n\nDraft #{mid} — tap Approve to send on Fanvue (or /send {mid})."
                     await notify.notify(
                         "alert",
