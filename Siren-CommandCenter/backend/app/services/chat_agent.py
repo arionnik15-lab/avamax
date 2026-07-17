@@ -671,12 +671,17 @@ async def _pull_profile(key: str) -> int:
 
 
 async def pull_now() -> int:
-    """Pull every connected model's conversations now, ignoring the auto-pull toggle."""
+    """Pull every connected model's conversations now, ignoring the auto-pull toggle.
+    Also runs auto-send so Sync doesn't leave safe drafts stuck in the inbox."""
     from . import fanvue_oauth
     total = 0
     for key in fanvue_oauth.connection_keys():
         if key.startswith("profile:"):
             total += await _pull_profile(key)
+    try:
+        await autosend_sweep()
+    except Exception:  # noqa: BLE001
+        pass
     return total
 
 
