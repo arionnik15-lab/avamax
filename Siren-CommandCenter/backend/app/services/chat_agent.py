@@ -286,7 +286,7 @@ async def generate_draft(thread_id: int) -> dict:
     return {
         "id": did, "text": text, "provider": provider,
         "suggested_media": suggested_media,
-        "price_cents": price_cents, "note": note,
+        "price_cents": price_cents, "note": note, "media_id": media_id,
     }
 
 
@@ -650,6 +650,17 @@ async def _pull_profile(key: str) -> int:
                     mid = draft.get("id")
                     snippet = (draft.get("text") or "")[:900]
                     price = int(draft.get("price_cents") or 0)
+                    from . import autosend
+                    will_auto = bool(mid) and autosend.enabled(pid) and autosend.safe(
+                        draft.get("text") or "",
+                        price_cents=price,
+                        media_id=draft.get("media_id"),
+                        note=draft.get("note") or "",
+                        has_history=True,
+                    )
+                    # Auto-send handles it on the next sweep — do not wake the operator.
+                    if will_auto:
+                        continue
                     price_bit = f"\nPPV ${price / 100:.0f}" if price else ""
                     buttons = None
                     if mid:
