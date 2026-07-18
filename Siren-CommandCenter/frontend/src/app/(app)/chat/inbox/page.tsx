@@ -71,14 +71,14 @@ export default function InboxPage() {
     if (!sel || !fanText.trim()) return;
     setBusy(true); setErr("");
     try { await api.chatFanMessage(sel, fanText.trim()); setFanText(""); await openThreadById(sel); refreshThreads(); }
-    catch { setErr("Could not generate a draft. Add a SambaNova, Cerebras, or Groq key in Settings."); }
+    catch (e) { setErr(e instanceof Error ? e.message : "Could not generate a draft."); }
     finally { setBusy(false); }
   }
   async function regenerate() {
     if (!sel) return;
     setBusy(true); setErr("");
     try { await api.chatRegenerate(sel); await openThreadById(sel); }
-    catch { setErr("Could not draft a reply. Add an LLM key in Settings."); }
+    catch (e) { setErr(e instanceof Error ? e.message : "Could not draft a reply."); }
     finally { setBusy(false); }
   }
   async function approve() {
