@@ -1,9 +1,9 @@
 # Updates Siren fix files from GitHub (telegram-chat-approve branch).
 # Default folder: Desktop\arion nigs updated siren
 
-$root = "C:\Users\arion\OneDrive\Desktop\arion nigs updated siren"
+$root = "C:\Users\arion\OneDrive\Desktop\arion nigs updated siren 2"
 if (-not (Test-Path $root)) {
-    $alt = "C:\Users\arion\Desktop\arion nigs updated siren"
+    $alt = "C:\Users\arion\Desktop\arion nigs updated siren 2"
     if (Test-Path $alt) { $root = $alt }
     else {
         Write-Host "Folder not found. Edit `$root in this script to your Siren path."
